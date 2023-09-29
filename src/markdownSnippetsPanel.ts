@@ -1,5 +1,8 @@
 import * as vscode from "vscode";
 import { Uri } from 'vscode';
+import MarkdownIt from "markdown-it";
+
+const markdown = MarkdownIt({ linkify: true });
 
 function getUri(
     webview: vscode.Webview,
@@ -85,6 +88,29 @@ export class MarkdownSnippetsPanel {
         }
         panel._panel.webview.postMessage({
             command: "setExerciseInfo",
+        });
+    }
+
+    public static selectionChanged(
+        event: vscode.TextEditorSelectionChangeEvent,
+    ) {
+        const panel = MarkdownSnippetsPanel.currentPanel;
+        if (!panel) {
+            return;
+        }
+        const editor = event.textEditor;
+        const documentText = editor.document.getText();
+        const selection = editor.selection;
+        const activeOffset = editor.document.offsetAt(selection.active);
+        const snippetStart = documentText.lastIndexOf('"""', activeOffset) + 3;
+        const snippetEnd = documentText.indexOf('"""', activeOffset); 
+        const snippetText = documentText.slice(snippetStart, snippetEnd);
+        // Convert to HTML
+        const snippetHtml = markdown.render(snippetText);
+        // Send to panel
+        panel._panel.webview.postMessage({
+            command: 'showHtml',
+            html: snippetHtml,
         });
     }
 
