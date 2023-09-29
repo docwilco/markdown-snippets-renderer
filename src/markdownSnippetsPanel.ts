@@ -25,15 +25,30 @@ function generateNonce() {
 export class MarkdownSnippetsPanel {
     public static currentPanel: MarkdownSnippetsPanel | undefined;
     private _disposables: vscode.Disposable[] = [];
+    private _startDelimiter: string;
+    private _endDelimiter: string;
+    private _delimtersSame: boolean;
+    private _lastEditor: vscode.TextEditor | undefined;
 
     private constructor(
         private readonly _panel: vscode.WebviewPanel,
         extensionUri: Uri
     ) {
+        const config = vscode.workspace.getConfiguration(
+            'markdownSnippetsRenderer'
+        );
+        this._startDelimiter = config.get('startDelimiter')!;
+        this._delimtersSame = config.get<boolean>('endSameAsStart')!;
+        if (this._delimtersSame) {
+            this._endDelimiter =
+                this._startDelimiter;
+        } else {
+            this._endDelimiter = config.get('endDelimiter')!;
+        }
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
         this._panel.webview.html = this._getWebviewContent(
             this._panel.webview,
-            extensionUri
+            extensionUri,
         );
         this._setWebviewMessageListener(this._panel.webview);
     }
@@ -82,28 +97,46 @@ export class MarkdownSnippetsPanel {
         if (!editor) {
             return;
         }
-        const panel = MarkdownSnippetsPanel.currentPanel;
-        if (!panel) {
-            return;
-        }
-        panel._panel.webview.postMessage({
-            command: "setExerciseInfo",
-        });
+        MarkdownSnippetsPanel.selectionChanged(editor);
     }
 
     public static selectionChanged(
-        event: vscode.TextEditorSelectionChangeEvent,
+        eventOrEditor:
+            vscode.TextEditorSelectionChangeEvent
+            | vscode.TextEditor
+            | undefined,
     ) {
         const panel = MarkdownSnippetsPanel.currentPanel;
-        if (!panel) {
+        if (!panel
+            || !panel._startDelimiter
+            || !panel._endDelimiter
+            || !eventOrEditor
+        ) {
             return;
         }
-        const editor = event.textEditor;
+
+        let editor: vscode.TextEditor;
+        if ('textEditor' in eventOrEditor) {
+            editor = eventOrEditor.textEditor;
+        } else {
+            editor = eventOrEditor;
+        }
+        panel._lastEditor = editor;
         const documentText = editor.document.getText();
         const selection = editor.selection;
         const activeOffset = editor.document.offsetAt(selection.active);
-        const snippetStart = documentText.lastIndexOf('"""', activeOffset) + 3;
-        const snippetEnd = documentText.indexOf('"""', activeOffset); 
+
+        // Search backwards for the start delimiter
+        const snippetStart = documentText.lastIndexOf(
+            panel._startDelimiter,
+            activeOffset
+        ) + panel._startDelimiter.length;
+        // Search forwards for the end delimiter
+        const snippetEnd = documentText.indexOf(
+            panel._endDelimiter,
+            activeOffset
+        );
+
         const snippetText = documentText.slice(snippetStart, snippetEnd);
         // Convert to HTML
         const snippetHtml = markdown.render(snippetText);
@@ -132,6 +165,8 @@ export class MarkdownSnippetsPanel {
 
         const nonce = generateNonce();
 
+        const startDelimiter = this._startDelimiter.replace(/"/g, '&quot;');
+        const endDelimiter = this._endDelimiter.replace(/"/g, '&quot;');
         return /*html*/ `
             <!DOCTYPE html>
             <html lang="en">
@@ -152,6 +187,29 @@ export class MarkdownSnippetsPanel {
                     <title>Hello World!</title>
                 </head>
                 <body>
+                    <div id="settings">
+                        <div id="delimiters">
+                            <vscode-text-field
+                                id="startDelimiter"
+                                value="${startDelimiter}"
+                            >
+                                Start Delimiter
+                            </vscode-text-field>
+                            <vscode-text-field
+                                id="endDelimiter"
+                                value="${endDelimiter}"
+                            >
+                                End Delimiter
+                            </vscode-text-field>
+                        </div>
+                        <div id="checkboxes">
+                            <vscode-checkbox id="same">
+                                Start and End Delimiters are the same
+                            </vscode-checkbox>
+                        </div>
+                    </div>
+                    <vscode-divider></vscode-divider>
+                    <div id="renderedSnippet"></div>
                     <script type="module" nonce="${nonce}" src="${webviewUri}">
                     </script>
                 </body>
@@ -159,15 +217,60 @@ export class MarkdownSnippetsPanel {
         `;
     }
 
+    public static updateConfig() {
+        const panel = MarkdownSnippetsPanel.currentPanel;
+        if (!panel) {
+            return;
+        }
+        const config = vscode.workspace.getConfiguration(
+            'markdownSnippetsRenderer'
+        );
+        panel._startDelimiter = config.get('startDelimiter')!;
+        panel._delimtersSame = config.get('endSameAsStart')!;
+        if (panel._delimtersSame) {
+            panel._endDelimiter =
+                panel._startDelimiter;
+        } else {
+            panel._endDelimiter = config.get('endDelimiter')!;
+        }
+        panel._panel.webview.postMessage({
+            command: 'updateConfig',
+            startDelimiter: panel._startDelimiter,
+            endDelimiter: panel._endDelimiter,
+            same: panel._delimtersSame,
+        });
+    }
+
     private _setWebviewMessageListener(webview: vscode.Webview) {
         webview.onDidReceiveMessage(
             (message: any) => {
                 const command = message.command;
-                const text = message.text;
-
                 switch (command) {
-                    case "hello":
-                        vscode.window.showInformationMessage(text);
+                    case 'updateDelimiters':
+                        this._startDelimiter = message.startDelimiter;
+                        this._endDelimiter = message.endDelimiter;
+                        this._delimtersSame = message.same;
+                        const config = vscode.workspace.getConfiguration(
+                            'markdownSnippetsRenderer'
+                        );
+                        config.update(
+                            'startDelimiter',
+                            this._startDelimiter,
+                            true
+                        );
+                        config.update(
+                            'endDelimiter',
+                            this._endDelimiter,
+                            true
+                        );
+                        config.update(
+                            'endSameAsStart',
+                            this._delimtersSame,
+                            true
+                        );
+                        MarkdownSnippetsPanel.selectionChanged(
+                            this._lastEditor
+                        );
                         return;
                 }
             },

@@ -27,6 +27,17 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		)
 	);
+
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeConfiguration(
+			(event: vscode.ConfigurationChangeEvent) => {
+				if (event.affectsConfiguration('markdownSnippetsRenderer')) {
+					MarkdownSnippetsPanel.updateConfig();
+				}
+			}
+		)
+	);
+
 }
 
 // This method is called when your extension is deactivated

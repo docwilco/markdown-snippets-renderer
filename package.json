@@ -22,7 +22,30 @@
                 "title": "Open to the side",
                 "category": "Markdown Snippets Renderer"
             }
-        ]
+        ],
+        "configuration": {
+            "title": "Markdown Snippets Renderer",
+            "properties": {
+                "markdownSnippetsRenderer.startDelimiter": {
+                    "type": "string",
+                    "default": "\"\"\"",
+                    "description": "The start delimiter for the snippets",
+                    "order": 0
+                },
+                "markdownSnippetsRenderer.endDelimiter": {
+                    "type": "string",
+                    "default": "\"\"\"",
+                    "description": "The end delimiter for the snippets",
+                    "order": 1
+                },
+                "markdownSnippetsRenderer.endSameAsStart": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Whether the end delimiter should be the same as the start delimiter, if this is set, `#markdownSnippetsRenderer.endDelimiter#` will be ignored.",
+                    "order": 2
+                }
+            }
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run package",

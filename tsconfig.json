@@ -13,12 +13,11 @@
 		"strict": true,   /* enable all strict type-checking options */
 		/* Additional Checks */
 		/* 
-		 * This should be everything not covered by the strict flag, except
-		 * exactOptionalPropertyTypes, because that messes with our
-		 * Exercise.success/done assignments.
+		 * This should be everything not covered by the strict flag.
 		 */
 		"allowUnreachableCode": false, /* Report errors on unreachable code. */
 		"allowUnusedLabels": false, /* Report errors on unused labels */
+		"exactOptionalPropertyTypes": true, /* Interpret optional property types as written, rather than adding 'undefined'. */
 		"noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
 		"noImplicitOverride": true, /* Ensure overriding members in derived classes are marked with an 'override' modifier. */
 		"noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
