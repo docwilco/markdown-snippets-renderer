@@ -17,6 +17,8 @@ provideVSCodeDesignSystem().register(
 
 window.addEventListener('load', main);
 
+let suspendEvents = false;
+
 // Setup listener for messages from the extension
 window.addEventListener('message', (event) => {
     const message = event.data;
@@ -40,12 +42,14 @@ window.addEventListener('message', (event) => {
             const sameCheckbox = same as Checkbox;
             const startField = startDelimiter as TextField;
             const endField = endDelimiter as TextField;
+            suspendEvents = true;
             sameCheckbox.checked = message.same;
             startField.value = message.startDelimiter;
             endField.value = message.endDelimiter;
             if (message.same) {
                 endField.disabled = true;
             }
+            suspendEvents = false;
             break;
         default:
             console.error('Unknown message received from extension');
@@ -77,6 +81,9 @@ function main() {
     const startField = startDelimiter as TextField;
     const endField = endDelimiter as TextField;
     sameCheckbox.addEventListener('change', () => {
+        if (suspendEvents) {
+            return;
+        }
         if (sameCheckbox.checked) {
             endField.value = startField.value;
             endField.disabled = true;
@@ -90,6 +97,9 @@ function main() {
         );
     });
     startField.addEventListener('input', () => {
+        if (suspendEvents) {
+            return;
+        }
         if (sameCheckbox.checked) {
             endField.value = startField.value;
         }
@@ -100,6 +110,9 @@ function main() {
         );
     });
     endField.addEventListener('input', () => {
+        if (suspendEvents) {
+            return;
+        }
         updateExtension(
             startField.value,
             endField.value,

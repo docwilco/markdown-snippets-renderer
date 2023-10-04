@@ -25,31 +25,21 @@ function generateNonce() {
 export class MarkdownSnippetsPanel {
     public static currentPanel: MarkdownSnippetsPanel | undefined;
     private _disposables: vscode.Disposable[] = [];
-    private _startDelimiter: string;
-    private _endDelimiter: string;
-    private _delimtersSame: boolean;
+    private _startDelimiter?: string;
+    private _endDelimiter?: string;
+    private _delimtersSame?: boolean;
     private _lastEditor: vscode.TextEditor | undefined;
 
     private constructor(
         private readonly _panel: vscode.WebviewPanel,
         extensionUri: Uri
     ) {
-        const config = vscode.workspace.getConfiguration(
-            'markdownSnippetsRenderer'
-        );
-        this._startDelimiter = config.get('startDelimiter')!;
-        this._delimtersSame = config.get<boolean>('endSameAsStart')!;
-        if (this._delimtersSame) {
-            this._endDelimiter =
-                this._startDelimiter;
-        } else {
-            this._endDelimiter = config.get('endDelimiter')!;
-        }
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
         this._panel.webview.html = this._getWebviewContent(
             this._panel.webview,
             extensionUri,
         );
+        MarkdownSnippetsPanel.updateConfig();
         this._setWebviewMessageListener(this._panel.webview);
     }
 
@@ -165,8 +155,6 @@ export class MarkdownSnippetsPanel {
 
         const nonce = generateNonce();
 
-        const startDelimiter = this._startDelimiter.replace(/"/g, '&quot;');
-        const endDelimiter = this._endDelimiter.replace(/"/g, '&quot;');
         return /*html*/ `
             <!DOCTYPE html>
             <html lang="en">
@@ -189,16 +177,10 @@ export class MarkdownSnippetsPanel {
                 <body>
                     <div id="settings">
                         <div id="delimiters">
-                            <vscode-text-field
-                                id="startDelimiter"
-                                value="${startDelimiter}"
-                            >
+                            <vscode-text-field id="startDelimiter">
                                 Start Delimiter
                             </vscode-text-field>
-                            <vscode-text-field
-                                id="endDelimiter"
-                                value="${endDelimiter}"
-                            >
+                            <vscode-text-field id="endDelimiter">
                                 End Delimiter
                             </vscode-text-field>
                         </div>
