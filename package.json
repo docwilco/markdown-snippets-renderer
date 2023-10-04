@@ -7,12 +7,30 @@
     "version": "0.1.0",
     "license": "SEE LICENSE IN LICENSE.md",
     "pricing": "Free",
+    "homepage": "https://github.com/docwilco/markdown-snippets-renderer",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/docwilco/markdown-snippets-renderer.git"
+    },
+    "bugs": {
+        "url": "https://github.com/docwilco/markdown-snippets-renderer/issues"
+    },
+    "categories": [
+        "Visualization",
+        "Programming Languages",
+        "Other"
+    ],
+    "keywords": [
+        "Markdown",
+        "Snippets",
+        "Render",
+        "Preview",
+        "Side"
+    ],
+
     "engines": {
         "vscode": "^1.82.0"
     },
-    "categories": [
-        "Other"
-    ],
     "activationEvents": [],
     "main": "./out/extension.js",
     "contributes": {
