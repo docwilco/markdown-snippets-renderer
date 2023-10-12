@@ -258,7 +258,7 @@ export class MarkdownSnippetsPanel {
         let theme = vscode.workspace.getConfiguration(
             'markdownSnippetsRenderer.markdown'
         ).get<string>('syntaxHighlightingTheme');
-        if (!theme || theme === 'default') {
+        if (!theme || theme === 'Default') {
             const workbenchTheme = vscode.workspace.getConfiguration(
                 'workbench'
             ).get<string>('colorTheme');

@@ -5,6 +5,11 @@ const copyAndGeneratePlugin = {
     name: 'copy-and-generate',
     setup(build) {
         build.onStart(() => {
+            if (process.env.NODE_ENV !== "production") {
+                console.log('Compilation mode: dev');
+            } else {
+                console.log('Compilation mode: prod');
+            }
             console.log('Copying and generating files...');
             // Create directory if it doesn't exist
             if (!fs.existsSync('./out/styles')) {
@@ -24,6 +29,18 @@ const copyAndGeneratePlugin = {
                 let outname = ((subdir !== '') ? subdir + '-' : '') + file.name;
                 fs.copyFileSync(file.path + '/' + file.name, './out/styles/' + outname);
             });
+            const themes = fs.readdirSync('./out/styles').map(file => file.replace(/\.min\.css$/, ''));
+            themes.sort();
+            themes.unshift('None');
+            themes.unshift('Default');
+            let packageJson = JSON.parse(fs.readFileSync('./package.json'));
+            packageJson.contributes.configuration.forEach(config => {
+                const setting = config.properties['markdownSnippetsRenderer.markdown.syntaxHighlightingTheme'];
+                if (setting) {
+                    setting.enum = themes;
+                }
+            });
+            fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 4));
         });
     }
 };
