@@ -1,4 +1,32 @@
 const { build } = require("esbuild");
+const fs = require("fs");
+
+const copyAndGeneratePlugin = {
+    name: 'copy-and-generate',
+    setup(build) {
+        build.onStart(() => {
+            console.log('Copying and generating files...');
+            // Create directory if it doesn't exist
+            if (!fs.existsSync('./out/styles')) {
+                fs.mkdirSync('./out/styles', { recursive: true });
+            }
+            fs.readdirSync('./node_modules/highlight.js/styles', {
+                recursive: true, withFileTypes: true
+            }).filter(
+                file => file.isFile()
+                    && file.name.endsWith('.min.css')
+            ).forEach(file => {
+                // remove everything up to first styles/ in path
+                // Windows likes to flip to backslash
+                let subdir = file.path.replace(/.*?styles[/\\]?/, '');
+                // Replace any separators that might be left
+                subdir = subdir.replace(/[/\\]/g, '-');
+                let outname = ((subdir !== '') ? subdir + '-' : '') + file.name;
+                fs.copyFileSync(file.path + '/' + file.name, './out/styles/' + outname);
+            });
+        });
+    }
+};
 
 const baseConfig = {
     bundle: true,
@@ -14,6 +42,7 @@ const extensionConfig = {
     entryPoints: ["./src/extension.ts"],
     outfile: "./out/extension.js",
     external: ["vscode"],
+    plugins: [copyAndGeneratePlugin],
 };
 
 const watchConfig = {

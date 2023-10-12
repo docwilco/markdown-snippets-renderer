@@ -1,8 +1,19 @@
 import * as vscode from "vscode";
 import { Uri } from 'vscode';
 import MarkdownIt from "markdown-it";
+import { Options as MarkdownItOptions } from "markdown-it";
+import hljs from "highlight.js";
 
-const markdown = MarkdownIt({ linkify: true });
+class MarkdownOptions implements MarkdownItOptions {
+    constructor(
+        public html: boolean,
+        public breaks: boolean,
+        public linkify: boolean,
+        public typographer: boolean,
+        public quotes: string | string[],
+        public highlight: ((str: string, lang: string) => string),
+    ) { }
+}
 
 function getUri(
     webview: vscode.Webview,
@@ -29,6 +40,7 @@ export class MarkdownSnippetsPanel {
     private _endDelimiter?: string;
     private _delimtersSame?: boolean;
     private _lastEditor: vscode.TextEditor | undefined;
+    private _markdown: MarkdownIt | undefined;
 
     private constructor(
         private readonly _panel: vscode.WebviewPanel,
@@ -39,7 +51,7 @@ export class MarkdownSnippetsPanel {
             this._panel.webview,
             extensionUri,
         );
-        MarkdownSnippetsPanel.updateConfig();
+        MarkdownSnippetsPanel.updateConfig(this);
         this._setWebviewMessageListener(this._panel.webview);
     }
 
@@ -104,7 +116,9 @@ export class MarkdownSnippetsPanel {
         ) {
             return;
         }
-
+        if (panel._markdown === undefined) {
+            panel._setMarkdown();
+        }
         let editor: vscode.TextEditor;
         if ('textEditor' in eventOrEditor) {
             editor = eventOrEditor.textEditor;
@@ -129,7 +143,7 @@ export class MarkdownSnippetsPanel {
 
         const snippetText = documentText.slice(snippetStart, snippetEnd);
         // Convert to HTML
-        const snippetHtml = markdown.render(snippetText);
+        const snippetHtml = panel._markdown!.render(snippetText);
         // Send to panel
         panel._panel.webview.postMessage({
             command: 'showHtml',
@@ -152,6 +166,7 @@ export class MarkdownSnippetsPanel {
 
     private _getWebviewContent(webview: vscode.Webview, extensionUri: Uri) {
         const webviewUri = getUri(webview, extensionUri, ["out", "webview.js"]);
+        const cssUri = getUri(webview, extensionUri, ["out", "styles", "monokai.min.css"]);
 
         const nonce = generateNonce();
 
@@ -172,7 +187,9 @@ export class MarkdownSnippetsPanel {
                             img-src ${webview.cspSource} https:;
                             script-src 'nonce-${nonce}';"
                     >
-                    <title>Hello World!</title>
+
+                    <title>Markdown Snippet</title>
+                    <link rel="stylesheet" id="stylesheetLink" href="${cssUri}">
                 </head>
                 <body>
                     <div id="settings">
@@ -189,6 +206,7 @@ export class MarkdownSnippetsPanel {
                                 Start and End Delimiters are the same
                             </vscode-checkbox>
                         </div>
+                        <a href="#" id="settings">All settings...</a>
                     </div>
                     <vscode-divider></vscode-divider>
                     <div id="renderedSnippet"></div>
@@ -199,11 +217,14 @@ export class MarkdownSnippetsPanel {
         `;
     }
 
-    public static updateConfig() {
-        const panel = MarkdownSnippetsPanel.currentPanel;
+    public static updateConfig(panel?: MarkdownSnippetsPanel) {
+        if (!panel) {
+            panel = MarkdownSnippetsPanel.currentPanel;
+        }
         if (!panel) {
             return;
         }
+        panel._setMarkdown();
         const config = vscode.workspace.getConfiguration(
             'markdownSnippetsRenderer'
         );
@@ -221,8 +242,37 @@ export class MarkdownSnippetsPanel {
             endDelimiter: panel._endDelimiter,
             same: panel._delimtersSame,
         });
+        this.updateTheme(panel);
+        MarkdownSnippetsPanel.selectionChanged(
+            panel._lastEditor
+        );
     }
 
+    public static updateTheme(panel?: MarkdownSnippetsPanel) {
+        if (!panel) {
+            panel = MarkdownSnippetsPanel.currentPanel;
+        }
+        if (!panel) {
+            return;
+        }
+        let theme = vscode.workspace.getConfiguration(
+            'markdownSnippetsRenderer.markdown'
+        ).get<string>('syntaxHighlightingTheme');
+        if (!theme || theme === 'default') {
+            const workbenchTheme = vscode.workspace.getConfiguration(
+                'workbench'
+            ).get<string>('colorTheme');
+            if (workbenchTheme?.includes('Light')) {
+                theme = 'github';
+            } else {
+                theme = 'monokai';
+            }
+        }
+        panel._panel.webview.postMessage({
+            command: 'updateTheme',
+            theme: theme,
+        });
+    }
     private _setWebviewMessageListener(webview: vscode.Webview) {
         webview.onDidReceiveMessage(
             (message: any) => {
@@ -254,10 +304,58 @@ export class MarkdownSnippetsPanel {
                             this._lastEditor
                         );
                         return;
+                    case 'settingsClicked':
+                        vscode.commands.executeCommand(
+                            'workbench.action.openSettings',
+                            '@ext:drwilco.markdown-snippets-renderer'
+                        );
+                        return;
                 }
             },
             undefined,
             this._disposables
         );
+    }
+
+    private static highlighter(str: string, lang: string): string {
+        console.log('highlighter', str, lang);
+        if (lang && hljs.getLanguage(lang)) {
+            try {
+                return hljs.highlight(str, { language: lang }).value;
+            } catch (_) { }
+        }
+        return "";
+    }
+
+    private _setMarkdown() {
+        const markdownConfig = vscode.workspace.getConfiguration(
+            'markdownSnippetsRenderer.markdown'
+        );
+
+        let quotes: string[] = [
+            markdownConfig.get('quotes.openDouble') ?? '',
+            markdownConfig.get('quotes.closeDouble') ?? '',
+            markdownConfig.get('quotes.openSingle') ?? '',
+            markdownConfig.get('quotes.closeSingle') ?? '',
+        ];
+        quotes = quotes.map((quote) =>
+            // Replace \u escaped characters with the actual character
+            // e.g. \u2018 -> ‘
+            quote.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
+                String.fromCharCode(parseInt(hex, 16))
+            )
+        );
+
+        const options = new MarkdownOptions(
+            markdownConfig.get('HTML')!,
+            markdownConfig.get('breaks')!,
+            markdownConfig.get('linkify')!,
+            markdownConfig.get('typographer')!,
+            quotes,
+            MarkdownSnippetsPanel.highlighter,
+        );
+        console.log('typographer', options.typographer);
+        this._markdown = MarkdownIt(options);
+
     }
 }

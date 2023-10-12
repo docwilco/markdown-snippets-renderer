@@ -34,6 +34,9 @@ export async function activate(context: vscode.ExtensionContext) {
 				if (event.affectsConfiguration('markdownSnippetsRenderer')) {
 					MarkdownSnippetsPanel.updateConfig();
 				}
+				if (event.affectsConfiguration('workbench.colorTheme')) {
+					MarkdownSnippetsPanel.updateTheme();
+				}
 			}
 		)
 	);

@@ -1,0 +1,170 @@
+{
+    "name": "markdown-snippets-renderer",
+    "displayName": "Markdown Snippets Renderer",
+    "publisher": "drwilco",
+    "description": "Render your current Markdown snippet to the side",
+    "preview": true,
+    "version": "0.1.0",
+    "license": "SEE LICENSE IN LICENSE.md",
+    "pricing": "Free",
+    "homepage": "https://github.com/docwilco/markdown-snippets-renderer",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/docwilco/markdown-snippets-renderer.git"
+    },
+    "bugs": {
+        "url": "https://github.com/docwilco/markdown-snippets-renderer/issues"
+    },
+    "categories": [
+        "Visualization",
+        "Programming Languages",
+        "Other"
+    ],
+    "keywords": [
+        "Markdown",
+        "Snippets",
+        "Render",
+        "Preview",
+        "Side"
+    ],
+    "engines": {
+        "vscode": "^1.82.0"
+    },
+    "activationEvents": [],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "markdownSnippetsRenderer.openToSide",
+                "title": "Open to the side",
+                "category": "Markdown Snippets Renderer"
+            }
+        ],
+        "configuration": [
+            {
+                "title": "Markdown Snippets Renderer",
+                "properties": {
+                    "markdownSnippetsRenderer.startDelimiter": {
+                        "type": "string",
+                        "default": "\"\"\"",
+                        "description": "The start delimiter for the snippets",
+                        "order": 0
+                    },
+                    "markdownSnippetsRenderer.endDelimiter": {
+                        "type": "string",
+                        "default": "\"\"\"",
+                        "description": "The end delimiter for the snippets",
+                        "order": 1
+                    },
+                    "markdownSnippetsRenderer.endSameAsStart": {
+                        "type": "boolean",
+                        "default": true,
+                        "markdownDescription": "Whether the end delimiter should be the same as the start delimiter, if this is set, `#markdownSnippetsRenderer.endDelimiter#` will be ignored.",
+                        "order": 2
+                    }
+                }
+            },
+            {
+                "title": "Markdown",
+                "id": "markdownSnippetsRenderer.markdown",
+                "properties": {
+                    "markdownSnippetsRenderer.markdown.HTML": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Render HTML tags",
+                        "order": 0
+                    },
+                    "markdownSnippetsRenderer.markdown.breaks": {
+                        "type": "boolean",
+                        "default": false,
+                        "markdownDescription": "Convert `\\n` in paragraphs into `<br>`",
+                        "order": 2
+                    },
+                    "markdownSnippetsRenderer.markdown.linkify": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Autoconvert URL-like text to links",
+                        "order": 3
+                    },
+                    "markdownSnippetsRenderer.markdown.typographer": {
+                        "type": "boolean",
+                        "default": false,
+                        "markdownDescription": "Enable some language-neutral replacement + quotes beautification. [Full list of replacements](https://github.com/markdown-it/markdown-it/blob/master/lib/rules_core/replacements.js)",
+                        "order": 4
+                    },
+                    "markdownSnippetsRenderer.markdown.quotes.openDouble": {
+                        "type": "string",
+                        "default": "“",
+                        "markdownDescription": "String that replaces opening double quotes when typographer is enabled. For example, you can use `«` for Russian, `„` for German, and `«\\u00A0` for French (`\\u00A0` is non-breaking space). Only `\\uXXXX`, where XXXX is 4 hex characters, is supported for non-literal characters.",
+                        "order": 5
+                    },
+                    "markdownSnippetsRenderer.markdown.quotes.closeDouble": {
+                        "type": "string",
+                        "default": "”",
+                        "markdownDescription": "String that replaces closing double quotes when typographer is enabled. For example, you can use `»` for Russian, `“` for German, and `\\u00A0»` for French (`\\u00A0` is non-breaking space). Only `\\uXXXX`, where XXXX is 4 hex characters, is supported for non-literal characters.",
+                        "order": 6
+                    },
+                    "markdownSnippetsRenderer.markdown.quotes.openSingle": {
+                        "type": "string",
+                        "default": "‘",
+                        "markdownDescription": "String that replaces opening single quotes when typographer is enabled. For example, you can use `„` for Russian, `‚` for German, and `‹\\u00A0` for French (`\\u00A0` is non-breaking space). Only `\\uXXXX`, where XXXX is 4 hex characters, is supported for non-literal characters.",
+                        "order": 7
+                    },
+                    "markdownSnippetsRenderer.markdown.quotes.closeSingle": {
+                        "type": "string",
+                        "default": "’",
+                        "markdownDescription": "String that replaces closing single quotes when typographer is enabled. For example, you can use `“` for Russian, `‘` for German, and `\\u00A0›` for French (`\\u00A0` is non-breaking space). Only `\\uXXXX`, where XXXX is 4 hex characters, is supported for non-literal characters.",
+                        "order": 8
+                    },
+                    "markdownSnippetsRenderer.markdown.syntaxHighlightingTheme": {
+                        "type": "string",
+                        "default": "Default",
+                        "markdownDescription": "The highlight.js theme to use. Default is `monokai` or `github`, depending on your VSCode theme. See [highlight.js demo](https://highlightjs.org/static/demo/) for all themes.",
+                        "order": 9,
+                        "enum": [
+                            "Default",
+                            "a11y-dark",
+                            "a11y-light",
+                            "agate",
+                            "an-old-hope",
+                            "monokai",
+                            "monokai-sublime",
+                            "github",
+                            "github-dark"
+                        ]
+                    }
+                }
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run package",
+        "compile": "node ./esbuild.js",
+        "package": "cross-env NODE_ENV=production node ./esbuild.js",
+        "watch": "node ./esbuild.js --watch",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.1",
+        "@types/node": "16.x",
+        "@types/vscode": "^1.82.0",
+        "@types/vscode-webview": "^1.57.2",
+        "@typescript-eslint/eslint-plugin": "^6.4.1",
+        "@typescript-eslint/parser": "^6.4.1",
+        "@vscode/test-electron": "^2.3.4",
+        "cross-env": "^7.0.3",
+        "esbuild": "^0.16.17",
+        "eslint": "^8.47.0",
+        "glob": "^10.3.3",
+        "mocha": "^10.2.0",
+        "typescript": "^5.1.6"
+    },
+    "dependencies": {
+        "@types/markdown-it": "^13.0.1",
+        "@vscode/webview-ui-toolkit": "^1.2.2",
+        "highlight.js": "^11.9.0",
+        "markdown-it": "^13.0.1"
+    }
+}
